@@ -80,20 +80,22 @@ def discharge(dev):
 						fillInTheBlank(dict_, last_, first_, track_first)
 #						print('*', len(dict_[track_first[1]]), dict_[track_first[1]][0], dict_[track_first[1]][-1])
 						track_last = last_
-						first_ = last_
 						track_first = eachSession[k]
-
-#					track_first = eachSession[k]
-#					dict_[track_first[1]].append([track_first[1], track_first[0], 0])
-#					first_ = eachSession[k]
-					statusD = False
+						first_ = track_first
+						last_ = track_first
+						#check if this is start of another discharging session; if true add new session else change status
+						flag = isThisTrueReading(eachSession[k], events, True)
+						if flag:
+							dict_[track_first[1]].append([track_first[1],track_first[0],0])
+						else:
+							statusD = False
 				elif last_[0] > eachSession[k][0]:
+					flag = isThisTrueReading(last_, events, True)
 					if not statusD:
 						#to check if event changed from charging to discharging	
 						#flag = checkFalsePos(events, False)
-						if events[0][0] >= events[1][0] or (events[1][1] - events[0][1]).total_seconds() > 2*60*60:
-							flag = False
-						if not flag:
+						#flag = isThisTrue(last_, events, True)
+						if flag:
 							#print('*',last_[0], eachSession[k][0],first_[0],track_first[1])
 							statusD = True
 							track_first = last_
@@ -109,34 +111,33 @@ def discharge(dev):
 #						unwanted fluctuations
 						#check if the event is still continuing to be of type discharging
 						#flag = checkFalsePos(events, False)
-						if events[0][0] >= events[1][0]:
-							flag = False
-						else:
-							flag = True
-						if flag:
+			
+						if not flag:				#this is a fluctuation
 							fillInTheBlank(dict_,last_, first_, track_first)
 							track_last = last_
 							first_ = events[1]
 							last_ = first_
-							track_first = events[1]
-							print('***#$@$@#@$#@$#$@#$@#$$@#**', events[:3], listOfSessions[j][0][1])
-						if not flag:				
+							#track_first = events[1]
+							#print('***#$@$@#@$#@$#$@#$@#$$@#**', events[:3], listOfSessions[j][0][1])
+						else:					#this is legitimate drop			
 							fillInTheBlank(dict_, eachSession[k], first_, track_first)
 							first_ = eachSession[k]
 							track_last = eachSession[k]
 				elif last_[0] < eachSession[k][0]:
+					flag = isThisTrueReading(last_,events,False)			#checking if this is charging session
 					if statusD:
-						flag = checkFalsePos(events, True)
-						
-						if not flag :
+						if flag :
 							#print('end session', last_, eachSession[k-1],k, len(eachSession))
-							dict_[track_first[1]].append([last_[1], last_[0],0])
+							#end the discharging session
+							fillInTheBlank(dict_, last_, first_, track_first)
+							#dict_[track_first[1]].append([last_[1], last_[0],0])
 							track_last = last_
-							first_ = last_
+							#first_ = last_
 							track_first = eachSession[k]
+							first_ = track_first
 							statusD = False
 							
-				if not flag:
+				if flag:
 					last_ = eachSession[k]
 				flag = False
 #				print(last_)
@@ -182,7 +183,7 @@ def fillInTheBlank(dict_, last_event, first_event, start_session_event):
 #since discharging rate can be anything, we will verify against charging rate.
 #assumption it cannot be higher than 2.5 levels per min == 100 level in 45 mins approx
 def isThisTrueReading(last, session, curr_status):
-	if len(eachSession) < 3:
+	if len(session) < 3:
 		print('Too small session length to decide')
 		return True
 	diff_mins = (session[1][1] - session[0][1]).total_seconds()/60.0
@@ -197,11 +198,12 @@ def isThisTrueReading(last, session, curr_status):
 				#most likely session[0] is a wrong reading
 				return False
 			
-		return True
 	else:
 		if session[0][0] > session[1][0]:
 			#is this a legitimate discharging session or just anomalous reading
-			if diff_mins == 0 or last[0] >
+			if diff_mins == 0 or (session[0][1] - last[1]).total_seconds() == 0 or (session[0][0] - last[0])/((session[0][1] - last[1]).total_seconds()/60) > 3:
+				return False
+	return True
 			
 
 
@@ -274,10 +276,10 @@ def cleanUp(dict_):
 			print(curr)
 			return
 		prev = curr
-	c = 1
-#	for key in sorted(new_.keys()):
-#		print(c,key, '---->', new_[key][0], new_[key][-1])
-#		c += 1
+		if(dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds() < 10*60:
+			print(i, sortedK[i], dict_[sortedK[i]][0][0], dict_[sortedK[i]][0][1], dict_[sortedK[i]][-1][0], dict_[sortedK[i]][-1][1])
+			c += 1
+	print('**', c)
 
 
 #do in pool
@@ -589,7 +591,7 @@ def plotTypesOfSession(all_dump):
 #Beginning
 #start_time = timeit.default_timer()
 #print('*************')
-#all_dump = doInPool()
+all_dump = doInPool()
 #print('Number of devices',len(all_dump))
 #all_dump = discharge('0c037a6e55da4e024d9e64d97114c642695c5434')
 
