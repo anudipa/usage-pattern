@@ -42,6 +42,7 @@ def discharge(dev):
 	statusD = False			#True when discharging
 #	flag = False
 	issues = 0
+	last_track_first = track_first
 #	print('Total number of days:', len(sortedDates))
 	for i in range(len(sortedDates)):
 		d = sortedDates[i].weekday()
@@ -52,7 +53,7 @@ def discharge(dev):
 			eachSession = listOfSessions[j]
 			#print('##',len(listOfSessions[j+1]))
 			for k in range(len(eachSession)):
-				flag = False
+				flag = True
 				#print('*****$#$#$#*****',j,listOfSessions[j][0][1], listOfSessions[j][-1][1], last_[1])
 				#check if the last tracked timestamp is after the current timestamp. can happen if we predicted this to be an anomaly. so ignore.
 				if last_[1] > eachSession[k][1] :
@@ -101,10 +102,6 @@ def discharge(dev):
 							track_first = last_
 							#track_first = eachSession[k]
 							dict_[track_first[1]].append([track_first[1],track_first[0],0])
-							#first_ = track_first
-							#if first_[0] < eachSession[k][0]:
-							#print('start discharge', track_first)
-							#fillInTheBlank(dict_, eachSession[k], first_, track_first)
 							first_ = eachSession[k]
 					else:
 #						sometimes there are wrong readings like a 0, these also fall under
@@ -124,22 +121,32 @@ def discharge(dev):
 							first_ = eachSession[k]
 							track_last = eachSession[k]
 				elif last_[0] < eachSession[k][0]:
-					flag = isThisTrueReading(last_,events,False)			#checking if this is charging session
+					flag = isThisTrueReading(last_,events,False)			#checking if this is end of discharging session
 					if statusD:
 						if flag :
 							#print('end session', last_, eachSession[k-1],k, len(eachSession))
 							#end the discharging session
 							fillInTheBlank(dict_, last_, first_, track_first)
+							#print how long the session was
+							d = (dict_[track_first[1]][-1][0]-dict_[track_first[1]][0][0]).total_seconds()
+							#if d < 10*60:
+							#	print('**', d/60.0, dict_[track_first[1]], '**', events[:3])
 							#dict_[track_first[1]].append([last_[1], last_[0],0])
 							track_last = last_
 							#first_ = last_
 							track_first = eachSession[k]
 							first_ = track_first
 							statusD = False
+
 							
 				if flag:
 					last_ = eachSession[k]
-				flag = False
+				if last_track_first[1] != track_first[1]:
+					if len(dict_[last_track_first[1]]) < 2:
+						print('!!!!!!!!', last_track_first, dict_[last_track_first[1]])
+					else:
+						print('*****', (dict_[last_track_first[1]][-1][0]-dict_[last_track_first[1]][0][0]).total_seconds()/60, dict_[last_track_first[1]][0][1] - dict_[last_track_first[1]][-1][1])
+					last_track_first = track_first
 #				print(last_)
 	print('****', len(dict_.keys()))
 #	all_ = list(dict_.keys())
@@ -147,7 +154,7 @@ def discharge(dev):
 #		t = abs(dict_[all_[i]][0][0] - dict_[all_[i]][-1][0]).total_seconds()/60
 #		print(i, t, dict_[all_[i]][0][0], dict_[all_[i]][0][1], dict_[all_[i]][-1][0], dict_[all_[i]][-1][1], len(dict_[all_[i]]))
 #ToDo
-	cleanUp(dict_)
+	#cleanUp(dict_)
 	new_dict = {}
 	new_dict[dev] = dict_
 	return new_dict
@@ -186,12 +193,12 @@ def isThisTrueReading(last, session, curr_status):
 	if len(session) < 3:
 		print('Too small session length to decide')
 		return True
-	diff_mins = (session[1][1] - session[0][1]).total_seconds()/60.0
-	if diff_mins == 0:
-		charging_rate = -1
-	else:
-		charging_rate = (session[1][0] - session[0][0])/diff_mins
 	if curr_status:
+		diff_mins = (session[1][1] - session[0][1]).total_seconds()/60.0
+		if diff_mins == 0:
+			charging_rate = -1
+		else:
+			charging_rate = (session[1][0] - session[0][0])/diff_mins
 		if session[0][0] < session[1][0]:
 			#is this a legitimate charging session or just anomalous reading
 			if diff_mins == 0 or charging_rate > 3 or (last[0] >= session[1][0] and diff_mins < 5):
@@ -199,10 +206,21 @@ def isThisTrueReading(last, session, curr_status):
 				return False
 			
 	else:
-		if session[0][0] > session[1][0]:
-			#is this a legitimate discharging session or just anomalous reading
-			if diff_mins == 0 or (session[0][1] - last[1]).total_seconds() == 0 or (session[0][0] - last[0])/((session[0][1] - last[1]).total_seconds()/60) > 3:
-				return False
+	#check if this is end of a session or a wrong reading
+		#is this the beginning of a new legitimate discharging session or just anomalous reading
+		#things to check: is the charging time too short, is the charging rate too high
+		#things to check: if the diff between next two event 0, 
+		c_time = (session[0][1] -  last[1]).total_seconds()/60.0
+		c_diff = session[0][0] - last[0]
+		if c_time == 0:
+			c_rate = 0
+		else:
+			c_rate = c_diff/c_time
+
+		if c_diff < 2 or c_time < 5 or c_rate > 3:
+			return False
+		if session[0][0] > session[1][0] and session[1][0] < session[2][0]:
+			return False
 	return True
 			
 
@@ -276,9 +294,10 @@ def cleanUp(dict_):
 			print(curr)
 			return
 		prev = curr
-		if(dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds() < 10*60:
-			print(i, sortedK[i], dict_[sortedK[i]][0][0], dict_[sortedK[i]][0][1], dict_[sortedK[i]][-1][0], dict_[sortedK[i]][-1][1])
-			c += 1
+#		if(dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds() < 10*60:
+#		print(i, sortedK[i], dict_[sortedK[i]][0][0], dict_[sortedK[i]][0][1], dict_[sortedK[i]][-1][0], dict_[sortedK[i]][-1][1])
+		print(i, (dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds()/60.0, (dict_[sortedK[i]][0][1] - dict_[sortedK[i]][-1][1]),dict_[sortedK[i]][-1][1])
+		c += 1
 	print('**', c)
 
 
