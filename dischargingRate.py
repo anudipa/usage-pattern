@@ -99,8 +99,12 @@ def discharge(dev):
 						if flag:
 							#print('*',last_[0], eachSession[k][0],first_[0],track_first[1])
 							statusD = True
-							track_first = last_
+							if first_[0] == last_[0]:
+								track_first = first_
+							else:
+								track_first = last_
 							#track_first = eachSession[k]
+							#print('***********')
 							dict_[track_first[1]].append([track_first[1],track_first[0],0])
 							first_ = eachSession[k]
 					else:
@@ -137,15 +141,18 @@ def discharge(dev):
 							track_first = eachSession[k]
 							first_ = track_first
 							statusD = False
+							#print('diff = ', (eachSession[k][0]-last_[0]), eachSession[k][1], last_[1])
 
 							
 				if flag:
 					last_ = eachSession[k]
 				if last_track_first[1] != track_first[1]:
-					if len(dict_[last_track_first[1]]) < 2:
-						print('!!!!!!!!', last_track_first, dict_[last_track_first[1]])
-					else:
-						print('*****', (dict_[last_track_first[1]][-1][0]-dict_[last_track_first[1]][0][0]).total_seconds()/60, dict_[last_track_first[1]][0][1] - dict_[last_track_first[1]][-1][1])
+					if last_track_first[1] in dict_ and len(dict_[last_track_first[1]]) < 2:
+						print('!!!!!!!!', last_track_first, track_first, events[:3])
+				if first_[0] != last_[0] and statusD:
+					print('*!*!*!*', first_, last_, eachSession[k])
+					#else:
+					#	print('*****', (dict_[last_track_first[1]][-1][0]-dict_[last_track_first[1]][0][0]).total_seconds()/60, dict_[last_track_first[1]][0][1] - dict_[last_track_first[1]][-1][1])
 					last_track_first = track_first
 #				print(last_)
 	print('****', len(dict_.keys()))
@@ -154,7 +161,7 @@ def discharge(dev):
 #		t = abs(dict_[all_[i]][0][0] - dict_[all_[i]][-1][0]).total_seconds()/60
 #		print(i, t, dict_[all_[i]][0][0], dict_[all_[i]][0][1], dict_[all_[i]][-1][0], dict_[all_[i]][-1][1], len(dict_[all_[i]]))
 #ToDo
-	#cleanUp(dict_)
+	cleanUp(dict_)
 	new_dict = {}
 	new_dict[dev] = dict_
 	return new_dict
@@ -219,6 +226,7 @@ def isThisTrueReading(last, session, curr_status):
 
 		if c_diff < 2 or c_time < 5 or c_rate > 3:
 			return False
+		elif c_diff > 5 and last[0] == session[1][0] and 
 		if session[0][0] > session[1][0] and session[1][0] < session[2][0]:
 			return False
 	return True
@@ -288,16 +296,16 @@ def cleanUp(dict_):
 			#	print('prev', prev[-1], '-----', 'curr', curr[0])
 		#else:
 		#	new_[sortedK[i]] = curr
-		if prev[-1][0] > sortedK[i] or diff >= 0:
-			print(i,sortedK[i-1], sortedK[i],'prev', prev[-1], '-----', 'curr', curr[0], curr[1])
-			print(prev)
-			print(curr)
-			return
+		if (sortedK[i] - prev[-1][0]).total_seconds() < 10*60  or diff >= 0:
+			print('**',i,'prev', prev[-1], '-----', 'curr', curr[0], curr[1])
+			#print(prev)
+			print(curr[2:5])
+			#return
 		prev = curr
-#		if(dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds() < 10*60:
+		if curr_span < 10*60:
 #		print(i, sortedK[i], dict_[sortedK[i]][0][0], dict_[sortedK[i]][0][1], dict_[sortedK[i]][-1][0], dict_[sortedK[i]][-1][1])
-		print(i, (dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds()/60.0, (dict_[sortedK[i]][0][1] - dict_[sortedK[i]][-1][1]),dict_[sortedK[i]][-1][1])
-		c += 1
+			print(i, (dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds()/60.0, (dict_[sortedK[i]][0][1] - dict_[sortedK[i]][-1][1]),dict_[sortedK[i]][-1][1])
+			c += 1
 	print('**', c)
 
 
