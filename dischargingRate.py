@@ -73,6 +73,8 @@ def discharge(dev):
 						while(len(events) < 4 and p < len(dData[sortedDates[i+1]])):
 							events = events + dData[sortedDates[i+1]][p]
 							p += 1
+				if statusD and first_[0] != last_[0]:
+					print('!!Not consistent', first_, last_, eachSession[k])
 #				flag = checkFalsePos(events,statusD)
 				#if two timestamps/events are too far apart or current level is higher than last recorded, then end earlier session and start new.
 				if (eachSession[k][1] - last_[1]).total_seconds() > 15*60*60 and eachSession[k][0] > last_[0]:
@@ -114,13 +116,24 @@ def discharge(dev):
 						#flag = checkFalsePos(events, False)
 			
 						if not flag:				#this is a fluctuation
-							fillInTheBlank(dict_,last_, first_, track_first)
-							track_last = last_
-							first_ = events[1]
-							last_ = first_
+							if dict_[track_first[1]][-1][1] < last_[0]:
+								print('*',track_first[1], dict_[track_first[1]][-1], last_)
+							#fillInTheBlank(dict_,last_, first_, track_first)
+							#track_last = last_
+							#first_ = events[1]
+							if dict_[track_first[1]][-1][1] >= events[1][0]:
+								#if still decreasing skip the wrong reading, and initialize first with next
+								continue
+							else:
+								#end this level tracking
+								fillInTheBlank(dict_,last_, first_, track_first)
+								#first_ = events[1]
+							#last_ = first_
 							#track_first = events[1]
 							#print('***#$@$@#@$#@$#$@#$@#$$@#**', events[:3], listOfSessions[j][0][1])
-						else:					#this is legitimate drop			
+						else:					#this is legitimate drop
+							if dict_[track_first[1]][-1][1] < last_[0]:
+								print('**',track_first[1], dict_[track_first[1]][-1], last_)			
 							fillInTheBlank(dict_, eachSession[k], first_, track_first)
 							first_ = eachSession[k]
 							track_last = eachSession[k]
@@ -129,19 +142,22 @@ def discharge(dev):
 					if statusD:
 						if flag :
 							#print('end session', last_, eachSession[k-1],k, len(eachSession))
+							if dict_[track_first[1]][-1][1] < last_[0]:
+								print('***',track_first[1], dict_[track_first[1]][-1], last_)
 							#end the discharging session
 							fillInTheBlank(dict_, last_, first_, track_first)
-							#print how long the session was
-							d = (dict_[track_first[1]][-1][0]-dict_[track_first[1]][0][0]).total_seconds()
-							#if d < 10*60:
-							#	print('**', d/60.0, dict_[track_first[1]], '**', events[:3])
+							#check if the discharging session just ended is too short(less than 10 mins), then ignore by deleting that key
+							span = (dict_[track_first[1]][-1][0]-dict_[track_first[1]][0][0]).total_seconds()
+							if span < 10*60:
+								dict_.pop(track_first[1], None)
 							#dict_[track_first[1]].append([last_[1], last_[0],0])
 							track_last = last_
 							#first_ = last_
 							track_first = eachSession[k]
 							first_ = track_first
 							statusD = False
-							#print('diff = ', (eachSession[k][0]-last_[0]), eachSession[k][1], last_[1])
+							
+							
 
 							
 				if flag:
@@ -211,6 +227,9 @@ def isThisTrueReading(last, session, curr_status):
 			if diff_mins == 0 or charging_rate > 3 or (last[0] >= session[1][0] and diff_mins < 5):
 				#most likely session[0] is a wrong reading
 				return False
+#		if session[0][0] > session[1][0] and session[1][0] < session[2][0]:
+#			if (session[1][1] - last[1]).total_seconds() < 10*60:
+#				return False
 			
 	else:
 	#check if this is end of a session or a wrong reading
@@ -224,47 +243,14 @@ def isThisTrueReading(last, session, curr_status):
 		else:
 			c_rate = c_diff/c_time
 
-		if c_diff < 2 or c_time < 5 or c_rate > 3:
+		if c_diff < 2 or c_time < 10 or c_rate > 2.75:
 			return False
-		elif c_diff > 5 and last[0] == session[1][0] and 
-		if session[0][0] > session[1][0] and session[1][0] < session[2][0]:
-			return False
+		#elif last[0] == session[1][0] and (session[1][1] - last[1]).total_seconds < 1
+		#if session[0][0] > session[1][0] and session[1][0] < session[2][0]:
+		#	return False
 	return True
 			
 
-
-#flag =  False if this a charging event, True if this is a discharging event, returns true always if
-#fluctuation is detected and false if it is truly a change in charging status
-def checkFalsePos(eachSession, flag):
-# check 3 consecutive events 
-	flaw = 0		#count is increased if there is discripency
-	if len(eachSession) < 4:
-#		print('No more sessions to add', eachSession)
-		return False
-	for i in [0,1,2]:
-#if the decrease or increase is seen in consecutive events increase flaw else decrease. also if two events
-#are further than 1 hour apart increase flaw and break, its too far apart to decide fluctuation
-#if flaw if > 1 then its not a fluctuation else it is a fluctuation
-		if (eachSession[i+1][1] - eachSession[i][1]).total_seconds() >= 60*60: #or abs(eachSession[i][0] - eachSession[i+1][0]) >= 10:
-			flaw += 2
-			break 
-		if not flag:			#check if it is consistently deceasing
-			if eachSession[i][0] >= eachSession[i+1][0]:
-				flaw += 1
-			else:
-				flaw -= 1
-				break	
-		else:				#check if it is consistently increasing
-			if eachSession[i][0] <= eachSession[i+1][0]:
-				flaw += 1
-			else:
-				flaw -=1
-				break
-	if flaw > 1:
-		return False
-	else:
-		#print('flaw', flaw)
-		return True
 
 #combine any sessions that got fragmented
 def cleanUp(dict_):
@@ -284,28 +270,14 @@ def cleanUp(dict_):
 		#print(curr[0][0], prev[-1][1])
 		interval = (curr[0][0] - prev[-1][0]).total_seconds()
 		diff = prev[-1][1] - curr[0][1]
-#		if interval < 5*60*60:
-#			print('prev ended at', prev[-1], diff)
-#Things to check: 1. First if prev[-1] level is very close to curr[0] level or former is greater than later. 
-#If true check time difference between end of prev session and start of curr session. If diff is less than
-#4hrs then the two sessions should be merged.
-		#if diff >= 0 or diff == -1:
-			#if interval < 4*3600 or (curr_span < 5*60 and interval < 30*60):
-			#	new_[sortedK[i-1]]  +=  curr
-			#else:
-			#	print('prev', prev[-1], '-----', 'curr', curr[0])
-		#else:
-		#	new_[sortedK[i]] = curr
-		if (sortedK[i] - prev[-1][0]).total_seconds() < 10*60  or diff >= 0:
-			print('**',i,'prev', prev[-1], '-----', 'curr', curr[0], curr[1])
-			#print(prev)
-			print(curr[2:5])
-			#return
-		prev = curr
-		if curr_span < 10*60:
-#		print(i, sortedK[i], dict_[sortedK[i]][0][0], dict_[sortedK[i]][0][1], dict_[sortedK[i]][-1][0], dict_[sortedK[i]][-1][1])
-			print(i, (dict_[sortedK[i]][-1][0]-dict_[sortedK[i]][0][0]).total_seconds()/60.0, (dict_[sortedK[i]][0][1] - dict_[sortedK[i]][-1][1]),dict_[sortedK[i]][-1][1])
-			c += 1
+		#check if all the sessions are consistent, as in all are consistently decreasing
+		slist = sorted(dict_[sortedK[i]], key=lambda x: x[0])
+		l = len(slist)
+		for j in range(l-1):
+			if slist[j][1] < slist[j+1][1]:
+				print(i, l, j, sortedK[i], slist[j], slist[j+1])
+				c += 1
+
 	print('**', c)
 
 
@@ -313,7 +285,7 @@ def cleanUp(dict_):
 def doInPool():
 	pFile = pickle.load(open('/home/anudipa/Documents/Jouler_Extra/master_list_100.p','rb'), encoding='bytes')
 	filtered = convert(pFile)
-	filtered = filtered[:1]
+	filtered = filtered[:20]
 	print(filtered)
 	pool = Pool(processes = 4)
 	res = pool.map(discharge, filtered)
@@ -614,6 +586,16 @@ def plotTypesOfSession(all_dump):
 	ax.legend(labels=['High drain in 1st half','High drain in 2nd half','Other'],loc='upper left')
 	ax.set_title('For discharging sessions lesser than 12 hours')
 	fig.show()
+
+#Number of charging events per day for each device
+#def chargingEvent(dict_):
+#	results = []
+#	sortedD = sorted(dict_.keys())
+#	curr = sortedD[0]
+#	for i in range(1,len(sortedD):
+	
+
+
 
 #Beginning
 #start_time = timeit.default_timer()
