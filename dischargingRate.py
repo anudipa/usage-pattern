@@ -9,6 +9,7 @@ import pickle
 import json
 from datetime import *
 from pylab import *
+from scipy.stats import itemfreq
 import timeit
 
 def convert(data):
@@ -171,7 +172,7 @@ def discharge(dev):
 					#	print('*****', (dict_[last_track_first[1]][-1][0]-dict_[last_track_first[1]][0][0]).total_seconds()/60, dict_[last_track_first[1]][0][1] - dict_[last_track_first[1]][-1][1])
 					last_track_first = track_first
 #				print(last_)
-	print('****', len(dict_.keys()))
+	print('****', dev, len(dict_.keys()))
 #	all_ = list(dict_.keys())
 #	for i in range(len(all_)):
 #		t = abs(dict_[all_[i]][0][0] - dict_[all_[i]][-1][0]).total_seconds()/60
@@ -214,7 +215,7 @@ def fillInTheBlank(dict_, last_event, first_event, start_session_event):
 #assumption it cannot be higher than 2.5 levels per min == 100 level in 45 mins approx
 def isThisTrueReading(last, session, curr_status):
 	if len(session) < 3:
-		print('Too small session length to decide')
+#		print('Too small session length to decide')
 		return True
 	if curr_status:
 		diff_mins = (session[1][1] - session[0][1]).total_seconds()/60.0
@@ -278,14 +279,14 @@ def cleanUp(dict_):
 				print(i, l, j, sortedK[i], slist[j], slist[j+1])
 				c += 1
 
-	print('**', c)
+#	print('**', c)
 
 
 #do in pool
 def doInPool():
 	pFile = pickle.load(open('/home/anudipa/Documents/Jouler_Extra/master_list_100.p','rb'), encoding='bytes')
 	filtered = convert(pFile)
-	filtered = filtered[:20]
+	filtered = filtered[:2]
 	print(filtered)
 	pool = Pool(processes = 4)
 	res = pool.map(discharge, filtered)
@@ -588,19 +589,88 @@ def plotTypesOfSession(all_dump):
 	fig.show()
 
 #Number of charging events per day for each device
-#def chargingEvent(dict_):
-#	results = []
-#	sortedD = sorted(dict_.keys())
-#	curr = sortedD[0]
-#	for i in range(1,len(sortedD):
-	
+def chargingEvent(dict_, dev):
+	results = []
+	sortedD = sorted(dict_.keys())
+	curr = sortedD[0].date()
+	count = 0
+	session = [1]
+	days = [curr]
+	for i in range(1,len(sortedD)):
+		if sortedD[i].date() != curr:
+			curr = sortedD[i].date()
+			session.append(1)
+			days.append(curr)
+		else:
+			session[-1] += 1
 
+	f = itemfreq(session)
+	most_freq = max(itemfreq(session), key= lambda x: x[1])		
+	count012 = sum([x[1] for x in f if x[0] in [0,1,2]])
+	count3 = sum([x[1] for x in f if x[0] > 3])
+	#print([x[1] for x in f if x[0] > 3])
+	if count012 > len(session)/2:
+		print(dev, 'Category 1: 0 to 2 events per day', most_freq, count012, len(session))
+	elif count3 > count012:
+		print(dev, 'Category 2: 3 or more events per day', most_freq, count3, len(session))
+	else:
+		print(dev, 'Uncategorized', f)
+	startLevel(dict_, dev, session, days)
+	return
+
+#how length of session adn ending battery level varies if we know whatbattery level the session start
+def startLevelTest(dict_, dev, test1, test2):
+	levels = [] 			#[start, end]
+	length = []
+	sortedD = sorted(dict_.keys())
+#	for i in range(len(sortedD)):
+#		#get start and end battery level
+#		levels.append([dict_[sortedD[i]][0][1], dict_[sortedD[i]][-1][1]])
+#		length.append((dict_[sortedD[i]][-1][0] - dict_[sortedD[i]][0][0]).total_seconds()/60.0)
+#	high = [x[1] for x in levels if x[0] > 80]
+#	lg = [length[i] for i in range(len(levels)) if levels[i][0] > 80]
+#	print(lg)
+	dayToTrack = []
+	lg = []
+	j = 0
+	for i in range(len(test2)):
+		if test1[i] > 2:
+			continue
+		dayToTrack.append(test2[i])
+		if j > len(sortedD):
+			break
+		while(sortedD[j].date() <= dayToTrack[-1]):
+			if sortedD[j].date() < dayToTrack[-1]:
+				#print(sortedD[j].date(), dayToTrack[-1])
+				j += 1
+				continue
+			if dict_[sortedD[j]][-1][1] > 50:
+				print(dict_[sortedD[j]][-1], dayToTrack[-1])
+				lg.append((dict_[sortedD[i]][-1][0] - dict_[sortedD[i]][0][0]).total_seconds()/60.0)
+			#if dict_[sortedD[j]][0][1] > 80:
+			levels.append(dict_[sortedD[j]][-1][1])
+			j += 1
+
+	#fig, ax = plt.subplots()
+	#ax.hist(lg)
+	too_low = [lg[i] for i in range(len(lg)) if lg[i] < 30] 
+	print(len(dayToTrack),len(lg), too_low)
+	print(itemfreq(levels)[:5])
+	#fig.show()
+
+
+def funForAll(all_):
+	for i in range(len(all_)):
+		dev = next(iter(all_[i]))
+		dict_ = all_[i][dev]
+		chargingEvent(dict_, dev)
 
 
 #Beginning
 #start_time = timeit.default_timer()
 #print('*************')
 all_dump = doInPool()
+funForAll(all_dump)
 #print('Number of devices',len(all_dump))
 #all_dump = discharge('0c037a6e55da4e024d9e64d97114c642695c5434')
 
