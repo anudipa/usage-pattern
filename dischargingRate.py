@@ -11,6 +11,10 @@ from datetime import *
 from pylab import *
 from scipy.stats import itemfreq
 import timeit
+import testCases
+
+
+
 
 def convert(data):
 	data_type = type(data)
@@ -178,7 +182,10 @@ def discharge(dev):
 #		t = abs(dict_[all_[i]][0][0] - dict_[all_[i]][-1][0]).total_seconds()/60
 #		print(i, t, dict_[all_[i]][0][0], dict_[all_[i]][0][1], dict_[all_[i]][-1][0], dict_[all_[i]][-1][1], len(dict_[all_[i]]))
 #ToDo
-	cleanUp(dict_)
+#	cleanUp(dict_)
+	test = testCases.testDischarging(dev, dict_, True)
+	if not test:
+		cleanUp(dict_)
 	new_dict = {}
 	new_dict[dev] = dict_
 	return new_dict
@@ -255,29 +262,33 @@ def isThisTrueReading(last, session, curr_status):
 
 #combine any sessions that got fragmented
 def cleanUp(dict_):
+	new_dict = defaultdict(list)
 	sortedK = sorted(dict_.keys())
 	#check 3 instances at a time, prev, curr and next. 1. check timespan and change of level
 	#for curr. 2. check time interval and changeof battery level between prev and curr, and 
 	#between curr and next. if time diff is too small or level difference is none or continues
 	#to drop then merge prev. ###First try with 2 instances instead of 3 i.e. prev and curr
 	prev = dict_[sortedK[0]]
-	new_ = defaultdict(list)
+	new_dict[sortedK[0]] = sorted(prev, key=lambda x:x[0])
 	c = 0
 	for i in range(1, len(sortedK)):
-		curr = dict_[sortedK[i]]
+		curr = sorted(dict_[sortedK[i]], key = lambda x : x[0])
 #		print(dict_[sortedK[i]][-1], dict_[sortedK[i]][0])
-		curr_span = (dict_[sortedK[i]][-1][0] - dict_[sortedK[i]][0][0]).total_seconds()
-		
-		#print(curr[0][0], prev[-1][1])
-		interval = (curr[0][0] - prev[-1][0]).total_seconds()
-		diff = prev[-1][1] - curr[0][1]
 		#check if all the sessions are consistent, as in all are consistently decreasing
 		slist = sorted(dict_[sortedK[i]], key=lambda x: x[0])
 		l = len(slist)
-		for j in range(l-1):
-			if slist[j][1] < slist[j+1][1]:
-				print(i, l, j, sortedK[i], slist[j], slist[j+1])
-				c += 1
+		#if charging interval is short or charging diff is small, merge
+		#options: 1. if the current session is short ( < 15 mins and < 3) , then it can be fluctuations seen during charging, discard current
+		#options: 2. if the current session is okay (> 15 mins or > 3), then roll to the event whose battery level is equal or less than prev[-1]
+		#		and merge
+		interval = (curr[0][0] - new_dict[sortedK[i-1]][-1][0]).total_seconds()
+		diff = curr[0]1] - new_dict[sortedK[i-1]][-1][1]
+		curr_span = (curr[-1][0] - curr[0][0]).total_seconds()
+		curr_diff = curr[0][1] - curr[-1][1]
+		if interval < 10*60 or (diff < 3 and interval < 3*3600):
+			if curr_span < 15*60 and (curr[0][1] -curr[-1][1]) < 3:
+				continue
+			
 
 #	print('**', c)
 
@@ -286,7 +297,7 @@ def cleanUp(dict_):
 def doInPool():
 	pFile = pickle.load(open('/home/anudipa/Documents/Jouler_Extra/master_list_100.p','rb'), encoding='bytes')
 	filtered = convert(pFile)
-	filtered = filtered[:2]
+	filtered = filtered[:1]
 	print(filtered)
 	pool = Pool(processes = 4)
 	res = pool.map(discharge, filtered)
@@ -663,7 +674,9 @@ def funForAll(all_):
 	for i in range(len(all_)):
 		dev = next(iter(all_[i]))
 		dict_ = all_[i][dev]
-		chargingEvent(dict_, dev)
+		#chargingEvent(dict_, dev)
+		print(dev)
+		testCases.testDischarging(dev, dict_)
 
 
 #Beginning
