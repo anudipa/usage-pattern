@@ -183,11 +183,13 @@ def discharge(dev):
 #		print(i, t, dict_[all_[i]][0][0], dict_[all_[i]][0][1], dict_[all_[i]][-1][0], dict_[all_[i]][-1][1], len(dict_[all_[i]]))
 #ToDo
 #	cleanUp(dict_)
-	test = testCases.testDischarging(dev, dict_, True)
-	if not test:
-		cleanUp(dict_)
+	test = testCases.testDischarging(dev, dict_)
 	new_dict = {}
-	new_dict[dev] = dict_
+	if not test:
+		d = cleanUp(dict_)
+		new_dict[dev] = d
+	else:
+		new_dict[dev] = dict_
 	return new_dict
 
 def fillInTheBlank(dict_, last_event, first_event, start_session_event):
@@ -264,12 +266,15 @@ def isThisTrueReading(last, session, curr_status):
 def cleanUp(dict_):
 	new_dict = defaultdict(list)
 	sortedK = sorted(dict_.keys())
+	corrected = 0
 	#check 3 instances at a time, prev, curr and next. 1. check timespan and change of level
 	#for curr. 2. check time interval and changeof battery level between prev and curr, and 
 	#between curr and next. if time diff is too small or level difference is none or continues
 	#to drop then merge prev. ###First try with 2 instances instead of 3 i.e. prev and curr
 	prev = dict_[sortedK[0]]
-	new_dict[sortedK[0]] = sorted(prev, key=lambda x:x[0])
+	new_dict[sortedK[0]] = sorted(dict_[sortedK[0]], key=lambda x:x[0])
+	track_k = sortedK[0]
+	print('**Start cleanup: ', len(new_dict[sortedK[0]]))
 	c = 0
 	for i in range(1, len(sortedK)):
 		curr = sorted(dict_[sortedK[i]], key = lambda x : x[0])
@@ -277,27 +282,49 @@ def cleanUp(dict_):
 		#check if all the sessions are consistent, as in all are consistently decreasing
 		slist = sorted(dict_[sortedK[i]], key=lambda x: x[0])
 		l = len(slist)
+	#	print('**', i, track_k, sortedK[i],len(curr))
 		#if charging interval is short or charging diff is small, merge
 		#options: 1. if the current session is short ( < 15 mins and < 3) , then it can be fluctuations seen during charging, discard current
 		#options: 2. if the current session is okay (> 15 mins or > 3), then roll to the event whose battery level is equal or less than prev[-1]
 		#		and merge
-		interval = (curr[0][0] - new_dict[sortedK[i-1]][-1][0]).total_seconds()
-		diff = curr[0]1] - new_dict[sortedK[i-1]][-1][1]
+		interval = (curr[0][0] - new_dict[track_k][-1][0]).total_seconds()
+		diff = curr[0][1] - new_dict[track_k][-1][1]
 		curr_span = (curr[-1][0] - curr[0][0]).total_seconds()
 		curr_diff = curr[0][1] - curr[-1][1]
-		if interval < 10*60 or (diff < 3 and interval < 3*3600):
-			if curr_span < 15*60 and (curr[0][1] -curr[-1][1]) < 3:
+#		if i==38 or curr[0][0] == datetime.datetime(2015, 3, 27, 17, 3, 8, 86300):
+#			print('#1',curr[0], interval, diff, curr_span, curr_diff)
+		if interval <= 10*60 or (diff < 3 and interval < 3*3600):
+#			if i==38 or curr[0][0] == datetime.datetime(2015, 3, 27, 17, 3, 8, 86300):
+#				print('#',curr[0], interval, diff, curr_span, curr_diff)
+			if curr_span < 15*60 and curr_diff < 3:
+				#print('*Error corrected', curr[0], curr[-1])
+				corrected += 1
 				continue
-			
-
-#	print('**', c)
+			#start rolling
+#			if i==38 or curr[0][0] == datetime.datetime(2015, 3, 27, 17, 3, 8, 86300):
+#				print('#3', curr[0], interval, diff, curr_span, curr_diff)
+			for j in range(len(curr)):
+				if new_dict[track_k][-1][1] >= curr[j][1]:
+					break
+#			if i==38 or curr[0][0] == datetime.datetime(2015, 3, 27, 17, 3, 8, 86300):
+#				print('#4', curr[0], interval, diff, curr_span, curr_diff, j, len(curr))
+			if j < len(curr) -1:
+				new_dict[track_k] += curr[j:]
+				#print('Error corrected', new_dict[track_k][0], new_dict[track_k][-1])
+				corrected += 1
+				continue
+		else:
+			new_dict[sortedK[i]] = curr
+			track_k = sortedK[i]
+	print('**Cleanup: Before:', len(dict_.keys()), 'After: ', len(new_dict.keys()), 'Corrected: ', corrected)
+	return new_dict
 
 
 #do in pool
 def doInPool():
 	pFile = pickle.load(open('/home/anudipa/Documents/Jouler_Extra/master_list_100.p','rb'), encoding='bytes')
 	filtered = convert(pFile)
-	filtered = filtered[:1]
+	filtered = filtered[:10]
 	print(filtered)
 	pool = Pool(processes = 4)
 	res = pool.map(discharge, filtered)
@@ -671,19 +698,20 @@ def startLevelTest(dict_, dev, test1, test2):
 
 
 def funForAll(all_):
+	print('Start checking********************************')
 	for i in range(len(all_)):
 		dev = next(iter(all_[i]))
 		dict_ = all_[i][dev]
 		#chargingEvent(dict_, dev)
-		print(dev)
-		testCases.testDischarging(dev, dict_)
+		print(dev, len(dict_.keys()))
+		st = testCases.testDischarging(dev, dict_)
 
 
 #Beginning
 #start_time = timeit.default_timer()
 #print('*************')
-all_dump = doInPool()
-funForAll(all_dump)
+#all_dump = doInPool()
+#funForAll(all_dump)
 #print('Number of devices',len(all_dump))
 #all_dump = discharge('0c037a6e55da4e024d9e64d97114c642695c5434')
 
