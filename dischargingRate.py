@@ -14,6 +14,13 @@ import timeit
 import testCases
 
 
+path1a = '/home/anudipa/Documents/Jouler_Extra/discharge2/'
+path1b = '/home/anudipa/pattern/discharge/'
+path2a = '/home/anudipa/Documents/Jouler_Extra/master_list_100.p'
+path2b = '/home/anudipa/pattern/master_list_100.p'
+
+path_to_discharge = path1b
+path_to_dev = path2b
 
 
 def convert(data):
@@ -25,7 +32,7 @@ def convert(data):
 	return data_type(map(convert, data))
 
 def discharge(dev):
-	file1 = '/home/anudipa/Documents/Jouler_Extra/discharge2/'+dev+'.p'
+	file1 = path_to_discharge+dev+'.p'
 	try:
 		print('Starting', dev)
 		tmp1 = pickle.load(open(file1, 'rb'), encoding='bytes')
@@ -322,7 +329,7 @@ def cleanUp(dict_):
 
 #do in pool
 def doInPool():
-	pFile = pickle.load(open('/home/anudipa/Documents/Jouler_Extra/master_list_100.p','rb'), encoding='bytes')
+	pFile = pickle.load(open(path_to_dev,'rb'), encoding='bytes')
 	filtered = convert(pFile)
 	filtered = filtered[:10]
 	print(filtered)
