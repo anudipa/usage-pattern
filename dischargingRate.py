@@ -19,8 +19,8 @@ path1b = '/home/anudipa/pattern/discharge/'
 path2a = '/home/anudipa/Documents/Jouler_Extra/master_list_100.p'
 path2b = '/home/anudipa/pattern/master_list_100.p'
 
-path_to_discharge = path1b
-path_to_dev = path2b
+path_to_discharge = path1a
+path_to_dev = path2a
 
 
 def convert(data):

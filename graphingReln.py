@@ -15,6 +15,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn import utils, preprocessing
 import testCases
 import dischargingRate as dR
 import statistics as stats
@@ -145,15 +146,21 @@ def lookIntoClusters(data, labels_):
 		target = []
 		for j in range(len(cluster[i])):
 			data.append([cluster[i][j][0], cluster[i][j][2], cluster[i][j][3]])
-			target.append([cluster[i][j][1],cluster[i][j][4]])
+			lvl = cluster[i][j][1]
+			span = cluster[i][j][4]
+			new_lvl = int(lvl/10)*10
+			if span < 100:
+				new_span = int(span/100)*10
+			target.append([int(cluster[i][j][1]),int(cluster[i][j][4])])
+		print(utils.multiclass.type_of_target(target))
 		mid = int(len(data)/2)
 		knn = KNeighborsClassifier()
 		multi_target_ = MultiOutputClassifier(knn, n_jobs=1)
-		multi_target_.fit(data[:mid], target[:mid])
-		print('***',multi_target_.predict(data[mid+1:]))
-		print('!!!',target[mid+1:])
-			 
-	
+		multi_target_.fit(data[:mid], np.array(target[:mid]))
+#		print('***',multi_target_.predict(data[mid+1:]))
+#		print('!!!',target[mid+1:])
+		print(multi_target_.score(data[mid+1:], np.array(target[mid+1:])))			 
+		
 #		fig, (ax1, ax2, ax3) = plt.subplots(1,3, sharex=True)
 #		ax1.boxplot(data1,sym='',whis=[25,75],patch_artist = True)
 #		ax1.set_ylabel('Span in minutes')
