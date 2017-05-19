@@ -12,6 +12,9 @@ from pylab import *
 import timeit
 import dischargingRate as dr
 
+path1 = '/home/anudipa/pattern/pickles/Screen/'
+path_to_dev = '/home/anudipa/pattern/master_list_100.p'
+
 def convert(data):
 	data_type = type(data)
 	if data_type == bytes : return data.decode()
@@ -20,9 +23,21 @@ def convert(data):
 	if data_type == dict: data = data.items()
 	return data_type(map(convert, data))
 
+def doInPool(x):
+	pFile = pickle.load(open(path_to_dev,'rb'), encoding='bytes')
+	filtered = convert(pFile)
+	filtered = filtered[:x]
+	print(filtered)
+	pool = Pool(processes = 4)
+	res = pool.map(parseScreen, filtered)
+	pool.close()
+	pool.join()
+	return res
+
+
 def parseScreen(dev):
-	#file1 = '/home/anudipa/pattern/pickles/Screen/'+dev+'.p'
-	file1= '/home/anudipa/pattern/pickles/Screen/0c037a6e55da4e024d9e64d97114c642695c5434.p'
+	file1 = path1+dev+'.p'
+#	file1= '/home/anudipa/pattern/pickles/Screen/0c037a6e55da4e024d9e64d97114c642695c5434.p'
 	try:
 		print('Starting', dev)
 		tmp1 = pickle.load(open(file1, 'rb'), encoding='bytes')
@@ -66,7 +81,7 @@ def parseScreen(dev):
 
 #get all foreground sessions for every discharge sessions: list
 #get the battery levels for those fg sessions, and see when in fg session the battery level converges	
-def overlapDischarge(dev):
+def overlapDischarge(dev, dict_):
 	file1 = '/home/anudipa/pattern/pickles/Screen/'+dev+'.p'
 	try:
 		print('Starting now on', dev)
@@ -76,40 +91,72 @@ def overlapDischarge(dev):
 		print('Error while processing file', e)
 #first get the discharge rates for this device
 	screen_ = parseScreen(dev)
-	dict_ = dr.discharge(dev)
-	sortedK = sorted(dict_[dev].keys())
+#	dict_ = dr.discharge(dev)
+	sortedK = sorted(dict_.keys())
 	k = 0
 	sortedS = sorted(screen_.keys())
+	print(len(sortedK), len(sortedS))
 	overlap = defaultdict(list)
-	for i in range(len(sortedK)):
-		list_ = dict_[dev][sortedK[i]]
+	for i in range(1,len(sortedK)):
+		list_ = dict_[sortedK[i]]
 #get the start and end of a discharge session, look for screen in sessions between those, keep track of the next screen on
 #the datatype is dictionary containing list of [start,end] for each screen on session
 		start_  = sortedK[i]
-		end_ = dict_[dev][sortedK[i]][-1][0]
+		end_ = dict_[sortedK[i]][-1][0]
 		flag = False
-		for  j in (k,len(sortedS)):
-			if not flag and sortedS[j] >= start_ and sortedS[j] < end_:
+		if k >= len(sortedS)-1:
+			print(k, sortedS[-1], sortedK[i])
+			break
+		for j in range(k,len(sortedS)):
+			#print(j, len(sortedS))
+			#if j > 200:
+			#	print(j,'Exit')
+			#	return
+			#print(j, flag, start_, sortedS[j], screen_[sortedS[j]], end_)
+			if sortedS[j] < start_:
+				#print(j,'****Continue')
+				continue
+			elif not flag and sortedS[j] >= start_ and sortedS[j] < end_:
 				flag = True
 			elif sortedS[j] > end_:
+				#print('end of session', sortedS[j], end_)
+				k = j
 				break
+			#print(start_, sortedS[j], screen_[sortedS[j]], end_)
 			if flag:
-				if screen_[sortedS[j]] <= end_:
-					overlap[start_].add([sortedS[j], screen_[sortedS[j]]])
+				if screen_[sortedS[j]] < end_:
+					overlap[start_].append([sortedS[j], screen_[sortedS[j]]])
 				else:
-					overlap[start_].add([sortedS[j],end_])
+					overlap[start_].append([sortedS[j],end_])
+					#print('***Breaking')
 					flag = False
+					k = j
 					break
 		k = j
+	count1 = 0
+	count2 = 0
+	d = []
 	for key in sorted(overlap.keys()):
 		num_sessions = len(overlap[key])
 		fg_duration_sec = 0
-		for i in len(overlap[key]):
+		for i in range(len(overlap[key])):
 			fg_duration_sec += (overlap[key][i][1] - overlap[key][i][0]).total_seconds()
-		total_duration = (dict_[dev][key][-1][0]-key).total_seconds()
-		print('Start at ', key, ': ', num_sessions, total_duration, '--' , fg_duration_sec)
-
+		total_duration = (dict_[key][-1][0]-key).total_seconds()
+		if fg_duration_sec > 4*total_duration/5:
+			d.append(total_duration/60)
+#			print('Start at ', key, ': ', num_sessions, total_duration/60, '--' , fg_duration_sec/60, ':',dict_[dev][key][-1][0])
+#			for i in range(len(overlap[key])):
+#				print(i, overlap[key][i][0], overlap[key][i][1])
+			count2 += 1
+		count1 += 1
+	if len(d) > 0:
+		print('****',count1, count2, np.mean(d))
+	else:
+		print('****',count1, count2)
+#	sessions = {}
+#	sessions[dev] = overlap
+	return overlap
 		
 
-print("Starting")
-overlapDischarge('0c037a6e55da4e024d9e64d97114c642695c5434')
+#print("Starting")
+#overlapDischarge('0c037a6e55da4e024d9e64d97114c642695c5434')

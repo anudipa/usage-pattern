@@ -19,8 +19,8 @@ path1b = '/home/anudipa/pattern/discharge/'
 path2a = '/home/anudipa/Documents/Jouler_Extra/master_list_100.p'
 path2b = '/home/anudipa/pattern/master_list_100.p'
 
-path_to_discharge = path1a
-path_to_dev = path2a
+path_to_discharge = path1b
+path_to_dev = path2b
 
 
 def convert(data):
@@ -328,10 +328,10 @@ def cleanUp(dict_):
 
 
 #do in pool
-def doInPool():
+def doInPool(x):
 	pFile = pickle.load(open(path_to_dev,'rb'), encoding='bytes')
 	filtered = convert(pFile)
-	filtered = filtered[:10]
+	filtered = filtered[:x]
 	print(filtered)
 	pool = Pool(processes = 4)
 	res = pool.map(discharge, filtered)

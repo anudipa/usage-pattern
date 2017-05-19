@@ -1,0 +1,12 @@
+1. distribution/box plot for each feature [ duration, fg, start, end ]
+1a. fix one feature and vary other
+
+2. filter and test hypothesis:
+2a. shorter spans have max fg
+2b. high usage sees shorter span
+2c. higher avg discharge rate after a certain battery level causes session to end soon
+
+
+3. how long past history should to make accurate forecasts
+
+

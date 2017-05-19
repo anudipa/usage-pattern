@@ -18,25 +18,30 @@ from sklearn.multioutput import MultiOutputClassifier
 from sklearn import utils, preprocessing
 import testCases
 import dischargingRate as dR
+import screenParse as sc
 import statistics as stats
 from mpl_toolkits.mplot3d import Axes3D
 
 
 #the generic pool function
 def doInPool():
-	all_dump = dR.doInPool()
+	all_dump = dR.doInPool(10)
 	for d in range(len(all_dump)):
 		dev = next(iter(all_dump[d]))
 		dict_ = all_dump[d][dev]
 		print(dev, 'no of sessions: ', len(dict_.keys()))
-		startbatteryData(dict_, dev)
+		sc.overlapDischarge(dev, all_dump[d])
+		#startbatteryData(dict_, dev)
 def temp(all_dump):
 	for d in range(len(all_dump)):
 		dev = next(iter(all_dump[d]))
 		dict_ = all_dump[d][dev]
-		print(dev, 'no of sessions: ', len(dict_.keys()))
+		screen_ = sc.overlapDischarge(dev, all_dump[d])
+		print(dev, 'no of sessions: ', len(dict_.keys()), len(screen_.keys()))
 		#startbatteryData(dict_, dev)
-		clusterFeatures(dict_,dev)
+		#clusterFeatures(dict_,dev)
+		#allFeatures(dev, dict_, screen_)
+		createData(dict_, screen_)
 		break
 
 #for different battery level start, how does other features differ
@@ -213,6 +218,117 @@ def getHighUsage(session):
 		return 2
 	else:
 		return high.index(max(high))
+
+
+def allFeatures(dev, dict_, screen_):
+#create data stack: session start -> total duration, foreground time, start battery level, end battery level, end time
+	sortedK = sorted(screen_.keys())
+	data = []
+	for i in range(len(sortedK)):
+		dur = (dict_[sortedK[i]][-1][0] - dict_[sortedK[i]][0][0]).total_seconds()/60
+		fg = 0
+		for j in range(len(screen_[sortedK[i]])):
+			fg += (screen_[sortedK[i]][j][1] - screen_[sortedK[i]][j][0]).total_seconds()
+		fg = fg/60
+		start = dict_[sortedK[i]][0][1]
+		end = dict_[sortedK[i]][-1][1]
+		drop = start - end
+		data.append([dur, fg, drop, start, end])
+	#graphing************************************
+	#for fixed duration(rounded to closest hour, variation in fg, drop, start, end order by dur 
+	slist = sorted(data, key=lambda x : x[0])
+	last = 0
+	X1 = []
+	X2 = []
+	X3 = []
+	X4 = []
+	for i in range(len(slist)):
+		d = int(slist[i][0]/60) 
+		if d > 35:
+			break
+		if i == 0 or d != last:
+			if i > 0:
+				print(d, X1[-1])
+			X1.append([])
+			X2.append([])
+			X3.append([])
+			X4.append([])
+			last = d
+		frac = slist[i][1]/slist[i][0]	
+		X1[-1].append(round(frac,3))
+		X2[-1].append(slist[i][2])
+		X3[-1].append(slist[i][3])
+		X4[-1].append(slist[i][4])
+
+	fig, ax = plt.subplots(2,2)
+	ax[0,0].boxplot(X1, sym='',whis=[25,75],patch_artist = True)
+	#ax.set_xticks([i*10 for i in range(len(X))])
+	ax[0,0].set_xticklabels([])
+	ax[0,0].set_title('Foreground')
+	ax[0,1].boxplot(X2, sym='',whis=[25,75],patch_artist = True)
+	ax[0,1].set_xticklabels([])
+	ax[0,1].set_title('Level Drop')
+	ax[1,0].boxplot(X3, sym='',whis=[25,75],patch_artist = True)
+	ax[1,0].set_xticklabels([])
+	ax[1,0].set_title('Start Level')
+	ax[1,1].boxplot(X4, sym='',whis=[25,75],patch_artist = True)
+	ax[1,1].set_xticklabels([])
+	ax[1,1].set_title('End Level')
+	fig.show()
+
+
+#input : 1st_hour_[start level, fg_frac, avg_rate], 2nd_hour_[...], 3rd_hour_[...]
+#output: hours_left, end_level
+def createData(dict_, screen_):
+	print('func createdata')
+	sortedK = sorted(screen_.keys())
+	X = []
+	Y = []
+	c = 0
+	for i in range(len(sortedK)):
+		if c > 25:
+			print('**',c, i)
+			break
+		session = dict_[sortedK[i]]
+		scr = screen_[sortedK[i]]
+		span = (session[-1][0] - session[0][0]).total_seconds()
+		if span < 4 * 3600:
+			continue
+		c += 1
+		#get for all hours
+		hours = []
+		Y = []
+		max_hours = int((session[-1][0] - session[0][0]).total_seconds()/3600)
+		t2 = session[0][0]+timedelta(hours=1)
+		r = []
+		for j in range(0,len(session)):
+			if t2 > session[-1][0]:
+				print(t2,session[j][0])
+				break
+			if session[j][0] <  t2:
+				#e = session[j]
+				r.append(session[j][2])
+			else:
+				if (session[j-1][0] - t2).total_seconds() > 1:
+					print(session[j-1], t2)
+					break
+				left = (session[-1][0] - session[j-1][0]).total_seconds()/60
+				hours.append([session[j-1][1],np.mean(r)])
+				Y.append([left, session[-1][1]])
+				print(len(hours), hours[-1], ':', Y[-1])
+				r = []
+				t2 = t2 + timedelta(hours=1)
+			if len(hours) > max_hours:
+				print('!!!!!!!!')
+				
+#get fg/hour*100
+#def getFg(session, t1, t2):
+#	for i in range(len(session)):
+		
+
+
+
+
 
 
 def chargingPredict(dict_, dev):
