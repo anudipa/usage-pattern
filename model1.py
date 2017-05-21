@@ -2,9 +2,10 @@
 
 import os
 import numpy as np
+import pandas as pd
 import dischargingRate as dr
 import screenParse as sc
-from collections import defaultdict, Counter
+from collections import defaultdict, Counter, OrderedDict
 import pickle
 from datetime import *
 from pylab import *
@@ -100,22 +101,22 @@ class Modelling:
 				break
 		
 		all_sorted = sorted(all_, key=lambda x:x[2])
-		X = list(map(lambda z: z[:4], all_sorted))
-		Y = list(map(lambda z: z[4],all_sorted))
-		outputs = []
-		done = []
-		for i in range(len(X)):
-			#print(X[i],'------------->',Y[i])
-			e = X[i]
-			if e in done or e[3] == 0:
-				continue
-			outputs.append([])
-			for j in range(i,len(X)):
-				if e[2] > X[j][2]:
-					break
-				if e[0] == X[j][0] :
-					outputs[-1].append(Y[j])
-			done.append(e)
+		#X = list(map(lambda z: z[:4], all_sorted))
+		#Y = list(map(lambda z: z[4],all_sorted))
+		#outputs = []
+		#done = []
+		#for i in range(len(X)):
+		#	#print(X[i],'------------->',Y[i])
+		#	e = X[i]
+		#	if e in done or e[3] == 0:
+		#		continue
+		#	outputs.append([])
+		#	for j in range(i,len(X)):
+		#		if e[2] > X[j][2]:
+		#			break
+		#		if e[0] == X[j][0] :
+		#			outputs[-1].append(Y[j])
+		#	done.append(e)
 			#if i > 400:
 			#	break
 		#for i in range(len(done)):
@@ -123,7 +124,8 @@ class Modelling:
 		#		print(done[i], '---->', max(outputs[i]),min(outputs[i]),np.mean(outputs[i]))
 		#	if done[i][2] > 100:
 		#		break
-		print(len(X), len(done))
+		#print(len(X), len(done))
+		buildSteps(all_sorted)
 		return True
 
 	def extrapolate(self,list_):
@@ -132,10 +134,8 @@ class Modelling:
 		event = [new_t, 15, avg_rate]
 		return event
 
-	def connectedSteps(self, t_now, output):
-		graph = {}
 
-	def clustering(self,):
+	def clustering(self):
 		features = []
 		for i in range(len(self.X)):
 			features.append([X[0],X[1],X[2],Y[0]])
@@ -149,3 +149,38 @@ class Modelling:
 		ax.scatter(reduced_data[:,0], reduced_data[:,1], reduced_data[:,2], c=label_color, alpha=0.5)
 		ax.plot(centroids[:,0], centroids[:,1], centroids[:,2],'k*')
 		fig.show()
+
+	def buildSteps(self,data_ ):
+	#T, L, FG, dL : T (round by 5 mins) L (bin by 5) FG( .1), dL( by 5 level drop)
+	#all_.append([level_now, level_drop_now, time_passed_now, fg_frac_now, t_left_mins])
+	row_list = []
+	for i in range(len(data_)):
+		rem = data_[i][2]%60
+		if rem == 0:
+			T = data_[i][2]
+		if rem < 30:
+			T = int(data_[i][2]/60)*60 + 30
+		else:
+			T = int(data_[i][2]/60)*60 + 60
+		if data_[i][0]%5 == 0:
+			L = data_[i][0]
+		else:
+			L = int(data_[i][0]/5)*5 + 5
+		if data_[i][1]%5 == 0:
+			dL = data_[i][1]
+		else:
+			dL = int(data_[i][1]/5)*5 + 5
+		if data_[i][3] <= 0.01 or data_[i][3] == 1.0:
+			fg = data_[i][3]
+		elif data_[i][3] < 1.0:
+			fg = int(data_[i][3]*10)/10 + 0.1
+		else:
+			print('WTF fg > 1', data_[i]
+			break
+		target = data_[i][4]
+		d = OrderedDict()
+		d = {'time_from_start_mins':T, 'battery_level': L, 'drop_now': dL, 'foreground_frac': fg, 'discharge_time_left_mins': target}
+		row_list.append(d)
+	df = pd.DataFrame(row_list)
+	print(df)
+	return True
