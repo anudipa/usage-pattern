@@ -1,0 +1,13 @@
+\section*{Data Collection & Processing}
+
+\subsection*{Data Collection}
+PhoneLab data including battery and screen information of more than 175 users from years 2014 and 2015
+are processed and used for this project. Battery information is logged by the device every time battery
+manager intent is broadcasted by the battery manager due to some change in the system such as change in
+battery level, device being plugged in or taken off the plug, screen is being turned on or off. This data
+is logged in as json object and the datadump received from PhoneLab is processed in steps using custom python
+libraries, logic and design of which is explained in details in the next sub-section.
+
+
+\subsection*{Data Processing}
+The initial data dump is of size 16 GB. 
