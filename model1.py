@@ -55,6 +55,10 @@ class Modelling:
 		all_ = []
 		start_t = sorted(sc_.keys())[0]
 		sortedD = sorted(dict_.keys())
+		print('sortedD',len(sortedD))
+		self.test = defaultdict(list)
+		count = 0
+		fg_c =[0,0]
 		for i in range(len(sortedD)):
 			if sortedD[i] < start_t:
 				continue
@@ -68,64 +72,72 @@ class Modelling:
 			s = 0
 			fg_now = 0
 			hr_start = [session[0][0],session[0][1]]
+			last_ =  session[0][0]
 			for j in range(len(session)):
 				level_now = session[j][1]
 				level_drop_now = session[0][1] - session[j][1]
 				t_left_mins = round((last_event[0]-session[j][0]).total_seconds()/60,2)
+				if j > 0:
+					if session[j][0] == session[j-1][0]:
+						#print('Duplicate', j, session[j], session[j-1])
+						continue
 				#fg_usage_till_tNow
 				if sortedD[i] in sorted(sc_.keys()):
 					#print(len(sc_[sortedD[i]]))
 					for k in range(s, len(sc_[sortedD[i]])):
+						#if datetime.datetime(2015, 4,11,6,0,0)<session[j][0]<datetime.datetime(2015, 4,11,20,0,0):
+						#	print('**',fg_now, last_, session[j][0])
 						if session[j][0] < sc_[sortedD[i]][k][0]:
-							print('*',s,k, session[j][0], sc_[sortedD[i]][k][0],'---',fg_now)
-							s = k
+							#s = k
 							break
-						if session[j][0] > sc_[sortedD[i]][k][1]:
-							fg_now += (sc_[sortedD[i]][k][1] - sc_[sortedD[i]][k][0]).total_seconds()/60
-						elif sc_[sortedD[i]][k][0] < session[j][0] < sc_[sortedD[i]][k][1]:
-							fg_now += (sc_[sortedD[i]][k][1] - sessio
-						else:
+						if s == k and j >0 and sc_[sortedD[i]][k][0] < last_ < sc_[sortedD[i]][k][1]:
+							if last_< session[j][0] < sc_[sortedD[i]][k][1]:
+								fg_now += (session[j][0] - last_).total_seconds()/60
+								#print(sortedD[i], sc_[sortedD[i]][k], last_, session[j][0])
+								#last_ = session[j][0]
+								#s = k
+								break
+							else:
+								fg_now += (sc_[sortedD[i]][k][1] - last_).total_seconds()/60
+						elif sc_[sortedD[i]][k][0]< session[j][0] < sc_[sortedD[i]][k][1]:
 							fg_now += (session[j][0] - sc_[sortedD[i]][k][0]).total_seconds()/60
-							s = k
-							break
+						elif session[j][0] > sc_[sortedD[i]][k][1]:
+							fg_now += (sc_[sortedD[i]][k][1] - sc_[sortedD[i]][k][0]).total_seconds()/60
+#						if datetime.datetime(2015, 5, 30,6,0,0)<session[j][0]<datetime.datetime(2015,5,30,20,0,0):
+#							print('**',fg_now, '*',j,s,k,len(sc_[sortedD[i]]),last_, session[j][0], '||', sc_[sortedD[i]][k])
+					if session[j][0] > sc_[sortedD[i]][k][1]:
+						s = k+1
+					else:
+						s = k
+					last_ = session[j][0]
+						
 				#print(sortedD[i], s, j,  fg_now)
 				if j == 0:
 					fg_frac_now = 0
 				else:
 					fg_frac_now = round(fg_now/((session[j][0] - session[0][0]).total_seconds()/60), 4)
 				if fg_frac_now > 1:
-					print(fg_now, ((session[j][0] - session[0][0]).total_seconds()/60), session[j][0], sc_[sortedD[i]][s])
+					print('!!!', fg_now, ((session[j][0] - session[0][0]).total_seconds()/60), session[j][0])
+					continue
+				if fg_frac_now > 0.95:
+					fg_c[0] += 1
+				else:
+					fg_c[1] += 1
 				time_passed_now = int((session[j][0] - session[0][0]).total_seconds()/60)/10 * 10
-				all_.append([level_now, level_drop_now, time_passed_now, fg_frac_now, t_left_mins])
-			if i > 60:
-				break
-		
-		all_sorted = sorted(all_, key=lambda x:x[2])
-		#X = list(map(lambda z: z[:4], all_sorted))
-		#Y = list(map(lambda z: z[4],all_sorted))
-		#outputs = []
-		#done = []
-		#for i in range(len(X)):
-		#	#print(X[i],'------------->',Y[i])
-		#	e = X[i]
-		#	if e in done or e[3] == 0:
-		#		continue
-		#	outputs.append([])
-		#	for j in range(i,len(X)):
-		#		if e[2] > X[j][2]:
-		#			break
-		#		if e[0] == X[j][0] :
-		#			outputs[-1].append(Y[j])
-		#	done.append(e)
-			#if i > 400:
+				if i <= 300:
+					all_.append([level_now, level_drop_now, time_passed_now, fg_frac_now, t_left_mins])
+				else:
+					self.test[sortedD[i]].append([level_now, level_drop_now, time_passed_now, fg_frac_now, t_left_mins])
+					count += 1
+				
+			#if i > 300:
 			#	break
-		#for i in range(len(done)):
-		#	if len(outputs[i]) > 2:
-		#		print(done[i], '---->', max(outputs[i]),min(outputs[i]),np.mean(outputs[i]))
-		#	if done[i][2] > 100:
-		#		break
-		#print(len(X), len(done))
-		buildSteps(all_sorted)
+		print('%%%%%', count, len(all_))
+		print('!!!', fg_c)
+		all_sorted = sorted(all_, key=lambda x:x[2])
+		
+		self.buildSteps(all_sorted)
+		
 		return True
 
 	def extrapolate(self,list_):
@@ -150,37 +162,177 @@ class Modelling:
 		ax.plot(centroids[:,0], centroids[:,1], centroids[:,2],'k*')
 		fig.show()
 
-	def buildSteps(self,data_ ):
+	def buildSteps(self,data_):
 	#T, L, FG, dL : T (round by 5 mins) L (bin by 5) FG( .1), dL( by 5 level drop)
 	#all_.append([level_now, level_drop_now, time_passed_now, fg_frac_now, t_left_mins])
-	row_list = []
-	for i in range(len(data_)):
-		rem = data_[i][2]%60
-		if rem == 0:
-			T = data_[i][2]
-		if rem < 30:
-			T = int(data_[i][2]/60)*60 + 30
-		else:
-			T = int(data_[i][2]/60)*60 + 60
-		if data_[i][0]%5 == 0:
-			L = data_[i][0]
-		else:
-			L = int(data_[i][0]/5)*5 + 5
-		if data_[i][1]%5 == 0:
-			dL = data_[i][1]
-		else:
-			dL = int(data_[i][1]/5)*5 + 5
-		if data_[i][3] <= 0.01 or data_[i][3] == 1.0:
-			fg = data_[i][3]
-		elif data_[i][3] < 1.0:
-			fg = int(data_[i][3]*10)/10 + 0.1
-		else:
-			print('WTF fg > 1', data_[i]
+		print('Building steps', len(data_))
+		row_list = []
+		for i in range(len(data_)):
+			rem = data_[i][2]%60
+			if rem == 0:
+				T = data_[i][2]
+			if rem < 30:
+				T = int(data_[i][2]/60)*60 + 30
+			else:
+				T = int(data_[i][2]/60)*60 + 60
+			if data_[i][0]%5 == 0:
+				L = data_[i][0]
+			else:
+				L = int(data_[i][0]/5)*5 + 5
+			if data_[i][1]%5 == 0:
+				dL = data_[i][1]
+			else:
+				dL = int(data_[i][1]/5)*5 + 5
+			if data_[i][3] <= 0.01:
+				fg = 0.01
+			elif data_[i][3] < 1.0:
+				fg = (int((data_[i][3]+0.1)*10)/10)
+			
+			else:
+				fg = 1.0
+			target = data_[i][4]
+			d = OrderedDict()
+			d = {'A_time_from_start_mins':T, 'B_battery_level': L, 'C_drop_now': dL, 'D_foreground_frac': fg, 'E_discharge_time_left_mins': target}
+			row_list.append(d)
+		df = pd.DataFrame(row_list)
+		df.sort_values(['A_time_from_start_mins','B_battery_level','C_drop_now','D_foreground_frac'], inplace=True, ascending=True)
+		self.mothership = df
+		#print(df.head(100))
+		print('DataFrame created')
+		return True
+
+	def learning(self):
+		main = self.mothership
+		#reindex the dataframe, for same column A to D, get range for F
+		#in new dataframe add A to D, for F add mean, lower and upper limits
+		aggregations = {
+			'E_discharge_time_left_mins': {
+				'lower_quantile': lambda x: np.percentile(x, q=25),
+				'mean_value': 'mean',
+				'upper_quantile': lambda x: np.percentile(x, q=75),
+				'standard_dev': 'std'
+			}
+		}
+		#trial df with aggregated values for A <= 60
+		new_df = main.groupby(['A_time_from_start_mins','B_battery_level','C_drop_now','D_foreground_frac']).agg(aggregations)
+		print(new_df.columns)
+		#print(new_df.index)
+		return new_df
+		#return main.groupby(['A_time_from_start_mins','B_battery_level','C_drop_now','D_foreground_frac'])['E_discharge_time_left_mins'].count()
+		
+
+	def predicting(self, session):
+		#this will take a discharging session, and compare prediction and real values for 1 hour interval
+		#([level_now, level_drop_now, time_passed_now, fg_frac_now, t_left_mins])
+		grouped_ = self.learning()
+		steps = []
+		
+		if len(session) > 5:
+			for i in range(len(session)):
+				if session[i][2]%60 < 30:
+					T = int(session[i][2]/60)*60 + 30
+				else:
+					T = int(session[i][2]/60)*60 + 60
+				if session[i][0]%5 == 0:
+					L = session[i][0]
+				else:
+					L = int(session[i][0]/5)*5 + 5
+				if session[i][1]%5 == 0:
+					dL = session[i][1]
+				else:
+					dL = int(session[i][1]/5)*5 + 5
+				if session[i][3] <= 0.01:
+					fg = 0.01
+				elif session[i][3] < 1.0:
+					fg = (int((session[i][3]+0.1)*10)/10)
+				else:
+					fg = 1.0
+				target = session[i][4]
+				steps.append([T,L,dL,fg,target])
+			last_ = steps[0]
+			last_pred = 0
+			val = []
+			obv = []
+			err = []
+			t = []
+			#algo: for same T, get output for all input parameters, take mean and compare with last prediction, if it increases too much then discard the prediction and update it by decreasing it .
+			for i in range(len(steps)):
+				if last_[0] == steps[i][0]:
+					level = steps[i][1]
+					#row = grouped_[(grouped_.index.get_level_values('A_time_from_start_mins')==30)]
+					row = grouped_[(grouped_.index.get_level_values('A_time_from_start_mins')==steps[i][0]) & (grouped_.index.get_level_values('B_battery_level')==steps[i][1]) & (grouped_.index.get_level_values('C_drop_now')==steps[i][2]) & (grouped_.index.get_level_values('D_foreground_frac')==steps[i][3])]
+					if len(row['E_discharge_time_left_mins','mean_value'].values) == 0:
+						row =  grouped_[(grouped_.index.get_level_values('A_time_from_start_mins')==steps[i-1][0]) & (grouped_.index.get_level_values('B_battery_level')==steps[i-1][1])]
+					#print(row['E_discharge_time_left_mins','mean_value'].values, '-----', val)
+					val += list(row['E_discharge_time_left_mins','mean_value'].values)
+					obv.append(steps[i][4])
+					#print(row['E_discharge_time_left_mins','mean_value'].values, '-----', val)
+				if i < len(steps)-1 and last_[0] != steps[i+1][0]:
+					mean_p = np.mean(val)
+					mean_o = np.mean(obv)
+					if last_pred > 0 and (mean_p - last_pred) > 60:
+						mean_p = last_pred + 30
+					print('@T = ', last_[0],'predicted --->',mean_p, 'obeserved: ',mean_o)
+					err.append(abs(mean_p - mean_o))
+					t.append(last_[0])
+					val = []
+					obv = []
+					last_ = steps[i+1]
+					last_pred = mean_p
+
+		return [err,t]
+
+	def helpMe(self):
+		#help me choose a session to predict or any other thing
+		c = [0,0]
+		dict_ = self.test
+		#print(len(dict_.keys()))
+		sortedD = sorted(dict_.keys())
+		for d in range(len(self.all_dump)):
+			dev = next(iter(self.all_dump[d]))
+			dump = self.all_dump[d][dev]
 			break
-		target = data_[i][4]
-		d = OrderedDict()
-		d = {'time_from_start_mins':T, 'battery_level': L, 'drop_now': dL, 'foreground_frac': fg, 'discharge_time_left_mins': target}
-		row_list.append(d)
-	df = pd.DataFrame(row_list)
-	print(df)
-	return True
+		print(len(dump.keys()))
+		fig, ax = plt.subplots()
+		for i in range(len(sortedD)):
+			session = dump[sortedD[i]]
+			span = (session[-1][0] - session[0][0]).total_seconds()
+			start_  = session[0][1]
+			end_ = session[-1][1]
+			if span >= 20*3600 and end_ <= 15:
+				d_ = self.predicting(dict_[sortedD[i]])
+				print('-------------------------', i)
+				ax.plot(d_[1][2:], d_[0][2:],'k')
+				ax.plot(d_[1][2:], d_[0][2:], 'ro')
+				c[1] += 1
+			else:
+				c[0] += 1
+#			elif span > 18*3600:
+#				c[0] += 1
+#			elif span < 5*3600:
+#				c[0] += 1
+		ax.set_xlabel('Time since start (mins)')
+		ax.set_ylabel('Error in mins')
+		ax.set_title('For sessions more than 20 hours')
+		fig.show()
+		print(i,c)
+		return False
+
+
+#pseudocode:
+#For the present discharging session
+# 1. for current time t, get <P1 = t_since_start, P2= level_now, P3=total_drop_since_start, P4=frac_of_fg_duration>
+# 2. lookup main dataframe for similar entry with <P1,P2,P3,P4>
+# 	2a. if present bump w1 [weight associated with the observation]
+#	2b. if present add observation to projected_time_left[]
+#	2c. if not present add -1 to projected_time_left[]
+# 3. continue 1 & 2 till end of discharge session
+# 4. compute backwards observed_time_left
+# 5. compare each entry in observed_time_left and projected_time_left
+#	5a. for error less than 30 mins increase w2 [weight associated with <P1,P2,P3,P4>--<Target>]
+#	5b. for error more than 60 mins decrease w2
+# 6. if <P1,P2,P3,P4>--<Target> present in table, update new weights
+# 7. after every 7 days update the most_confident_paths dataframe  [decide threshold for w1,w2 to be included]
+	def feedBack(self):
+	
+		return False		
