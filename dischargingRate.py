@@ -19,8 +19,8 @@ path1b = '/home/anudipa/pattern/discharge/'
 path2a = '/home/anudipa/Documents/Jouler_Extra/master_list_100.p'
 path2b = '/home/anudipa/pattern/master_list_100.p'
 
-path_to_discharge = path1b
-path_to_dev = path2b
+path_to_discharge = path1a
+path_to_dev = path2a
 
 
 def convert(data):
@@ -281,7 +281,7 @@ def cleanUp(dict_):
 	prev = dict_[sortedK[0]]
 	new_dict[sortedK[0]] = sorted(dict_[sortedK[0]], key=lambda x:x[0])
 	track_k = sortedK[0]
-	print('**Start cleanup: ', len(new_dict[sortedK[0]]))
+	print('**Start cleanup: ')
 	c = 0
 	for i in range(1, len(sortedK)):
 		curr = sorted(dict_[sortedK[i]], key = lambda x : x[0])
@@ -300,10 +300,12 @@ def cleanUp(dict_):
 		curr_diff = curr[0][1] - curr[-1][1]
 #		if i==38 or curr[0][0] == datetime.datetime(2015, 3, 27, 17, 3, 8, 86300):
 #			print('#1',curr[0], interval, diff, curr_span, curr_diff)
-		if interval <= 10*60 or (diff < 3 and interval < 3*3600):
+		
+		if interval <= 15*60 or (diff < 3 and interval < 5*3600):
 #			if i==38 or curr[0][0] == datetime.datetime(2015, 3, 27, 17, 3, 8, 86300):
 #				print('#',curr[0], interval, diff, curr_span, curr_diff)
-			if curr_span < 15*60 and curr_diff < 3:
+			#if interval between last session end and current session  is long
+			if curr_span < 15*60 and curr_diff < 3 :
 				#print('*Error corrected', curr[0], curr[-1])
 				corrected += 1
 				continue
@@ -323,6 +325,13 @@ def cleanUp(dict_):
 		else:
 			new_dict[sortedK[i]] = curr
 			track_k = sortedK[i]
+	keys = list(new_dict.keys())
+	for k in keys:
+		span = (new_dict[k][-1][0] - new_dict[k][0][0]).total_seconds()
+		drop = (new_dict[k][0][1] - new_dict[k][1][1])
+		if span <= 300 or (span <=600 and drop < 2):
+			new_dict.pop(k,None)
+			corrected += 1
 	print('**Cleanup: Before:', len(dict_.keys()), 'After: ', len(new_dict.keys()), 'Corrected: ', corrected)
 	return new_dict
 
@@ -331,8 +340,9 @@ def cleanUp(dict_):
 def doInPool(x):
 	pFile = pickle.load(open(path_to_dev,'rb'), encoding='bytes')
 	filtered = convert(pFile)
+	print(len(filtered))
 	filtered = filtered[:x]
-	print(filtered)
+	#print(filtered)
 	pool = Pool(processes = 4)
 	res = pool.map(discharge, filtered)
 	pool.close()
@@ -348,6 +358,33 @@ def checkIf(session):
 				print(slist[j][0], slist[j][1])
 			return False
 	return True
+
+def testing():
+	all_ = doInPool(1)
+	dev = next(iter(all_[0]))
+	dict_ = all_[0][dev]
+	checkData(dict_)
+
+def checkData(dict_):
+	sortedK = sorted(dict_.keys())
+	intervals = []
+	span = []
+	for d in range(len(sortedK)-1):
+		#interval between sessions, and span of each session
+		d1 = (dict_[sortedK[d+1]][0][0] - dict_[sortedK[d]][-1][0]).total_seconds()/60
+		#intervals.append(round(d1,2))
+		d2 = (dict_[sortedK[d]][-1][0] - dict_[sortedK[d]][0][0]).total_seconds()/60
+		if d1 > 20000 or d2 > 20000:
+			continue
+		intervals.append(round(d1,2))
+		span.append(round(d2,2))
+		#print(d, d2, 'after', d1, '; drop =', dict_[sortedK[d]][0][1] - dict_[sortedK[d]][-1][1], 'inc by =', dict_[sortedK[d+1]][0][1] - dict_[sortedK[d]][-1][1])
+	print(max(intervals), max(span))
+	fig, ax = plt.subplots()
+	ind = np.arange(len(intervals))
+	ax.boxplot([intervals, span], sym='',whis=[25,75],patch_artist = True)
+	fig.show()
+
 def whatType(slist_):
 	end = slist_[-1]
 	start = slist_[0]
