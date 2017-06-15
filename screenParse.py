@@ -14,6 +14,10 @@ import dischargingRate as dr
 
 path1 = '/home/anudipa/pattern/pickles/Screen/'
 path_to_dev = '/home/anudipa/pattern/master_list_100.p'
+path2 = '/home/anudipa/Documents/Jouler_Extra/pickles/Screen/'
+path_to_dev2 = ''
+
+
 
 def convert(data):
 	data_type = type(data)
@@ -36,7 +40,7 @@ def doInPool(x):
 
 
 def parseScreen(dev):
-	file1 = path1+dev+'.p'
+	file1 = path2+dev+'.p'
 #	file1= '/home/anudipa/pattern/pickles/Screen/0c037a6e55da4e024d9e64d97114c642695c5434.p'
 	try:
 		print('Starting', dev)
@@ -82,7 +86,7 @@ def parseScreen(dev):
 #get all foreground sessions for every discharge sessions: list
 #get the battery levels for those fg sessions, and see when in fg session the battery level converges	
 def overlapDischarge(dev, dict_):
-	file1 = '/home/anudipa/pattern/pickles/Screen/'+dev+'.p'
+	file1 = path2+dev+'.p'
 	try:
 		print('Starting now on', dev)
 		tmp1 = pickle.load(open(file1, 'rb'), encoding='bytes')
