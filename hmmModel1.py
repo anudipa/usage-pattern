@@ -9,8 +9,9 @@ import pickle
 from datetime import *
 from pylab import *
 import matplotlib.pyplot as plt
-from hmmlearn.hmm import GaussianHMM
-
+import csv
+from hmmlearn.hmm import GaussianHMM, MultinomialHMM
+from seqlearn.hmm import MultinomialHMM
 
 def computeStates(path):
 	#load the pickle
@@ -64,6 +65,7 @@ def computeStates(path):
 		fg_now = 0
 #		sequence = [[],[]]
 		sequence = []
+		o_seq = []
 		for j in range(len(session)):
 			level_now = session[j][1]
 			level_drop_now = session[0][1] - session[j][1]
@@ -110,10 +112,11 @@ def computeStates(path):
 #			sequence[1].append(T_Left)
 			sequence.append(event)
 			#all_states.append(roundStates([T,L,dL,FG]))
-			all_output.append(T_Left)
+			o_seq.append(T_Left)
 			if L < 15:
 				break
-		all_states.append(np.array(sequence))
+		all_states.append(sequence)
+		all_output.append(o_seq)
 		######################################################################################
 	all_ = {}
 	all_['states'] = all_states
@@ -148,7 +151,7 @@ def roundStates(data_):
 		FG = (int((data_[3]+0.1)*10)/10)
 	else:
 		FG = 1.0
-	return([T,L,dL,FG])
+	return([int(T),int(L),int(dL),round(FG,2)])
 
 
 
@@ -161,21 +164,51 @@ def extrapolate(list_):
 	event = [new_t, 15, avg_rate]
 	return event
 
-
+def createCSV(list_, op,  dev):
+	path_to_file = '/home/anudipa/Documents/Jouler_Extra/scripts/data/csv/'+dev+'.csv'
+	with open(path_to_file,'w') as csvfile:
+		fieldnames = ['time','level','level_drop','fg_usage','output']
+		writer = csv.writer(csvfile, delimiter=';')
+		writer.writerow(['time', 'level', 'level_drop', 'fg_usage', 'time_left'])
+		for i in range(len(list_)):
+			for j in range(len(list_[i])):
+				#print(i,'..............',list_[i])
+				writer.writerow([list_[i][j][0], list_[i][j][1], list_[i][j][2], list_[i][j][3], op[i][j]])
+		
+	####
+#	with open(path_to_file) as csvfile:
+#		reader = csv.reader(csvfile, delimiter=';')
+#		for row in reader:
+#			print(row)
+		
 
 ######################################################
 ############  HMM IMPLEMENTATION  ####################
 ######################################################
-def hmmModel(states, output):
-	data = states[:2]
-	for
-	print(np.array(data).shape)
-	X = np.array(data).reshape(4,)
-	lengths = [len(X[i]) for i in range(len(X))]
-	print(X)
-	model = GaussianHMM().fit(X,lengths)
-	print(model.transmat_)
-	return
+#def hmmModel(states, output):
+#	data = states[:2]
+#	rows = len(data[0])
+#	cols = len(data[0][0])
+#	A = data[0].reshape(rows,cols)
+#	rows = len(data[1])
+#	B = data[1].reshape(rows,cols)
+#	X = np.vstack((A,B))
+#	print(np.array(X).shape)
+#	#X = np.array(data).reshape(4,)
+#	lengths = [len(X[0]), len(X[1])]
+#	#print(X)
+#	model = MultinomialHMM().fit(X,lengths)
+#	print(model.transmat_)
+#	return
+
+def hmmModel(dev):
+	path_to_file = '/home/anudipa/Documents/Jouler_Extra/scripts/data/csv/'+dev+'.csv'
+	#read X and y
+	with open (path_to_file) as csvfile:
+		reader = csv.reader(csvfile, delimiter=';')
+		heading = next(reader)
+		for row in reader:
+		#read rows and create sequences for X and y
 
 
 def debug1(dict_, sc_):
@@ -204,8 +237,10 @@ def debug1(dict_, sc_):
 	print('Total matches: ', c, 'error', err)
 
 if __name__ == "__main__":
-	path = '/home/anudipa/Documents/Jouler_Extra/scripts/data/shortlisted/0f73f649f1e0bb371f1fdcadf86f02567670315a.p'
-	all_ = computeStates(path)
-	if all_ is not None:
-		print('Input states', len(all_['states']))
-	hmmModel(all_['states'], all_['output'])
+	path = '/home/anudipa/Documents/Jouler_Extra/scripts/data/shortlisted/f5df8ff55638f528e0151f217f5641264a1f27d9.p'
+	dev = 'f5df8ff55638f528e0151f217f5641264a1f27d9'
+#	all_ = computeStates(path)
+#	if all_ is not None:
+#		print('Input states', len(all_['states']))
+#	createCSV(all_['states'], all_['output'], dev)
+	hmmModel(dev)
