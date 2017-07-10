@@ -53,6 +53,12 @@ def graphDischargeSpan():
 	ax.set_xlabel('Users')
 	fig.show()
 
-if __name__ == "__main__":
-	all_dump = dr.doInPool(10)
-	
+def loadDeviceOne(dev):
+	filename = '/home/anudipa/Documents/Jouler_Extra/final/shortlisted/'+dev+'.p'
+	try:
+		dDataset = pickle.load(open(filename,'rb'), encoding='bytes')
+		device = next(iter(dDataset))
+		
+		print(dDataset[dev].keys())	
+	except Exception as e:
+		print('Error',e)
