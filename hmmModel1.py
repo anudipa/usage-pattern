@@ -11,7 +11,7 @@ from pylab import *
 import matplotlib.pyplot as plt
 import csv
 from hmmlearn.hmm import GaussianHMM, MultinomialHMM
-from seqlearn.hmm import MultinomialHMM
+#from seqlearn.hmm import MultinomialHMM
 
 def computeStates(path):
 	#load the pickle
@@ -202,13 +202,92 @@ def createCSV(list_, op,  dev):
 #	return
 
 def hmmModel(dev):
-	path_to_file = '/home/anudipa/Documents/Jouler_Extra/scripts/data/csv/'+dev+'.csv'
+	path_to_file = 'data/csv/'+dev+'.csv'
+	x = []
+	y = []
 	#read X and y
 	with open (path_to_file) as csvfile:
 		reader = csv.reader(csvfile, delimiter=';')
 		heading = next(reader)
+		last = -1
+		lengths = []
+		c = 1
+		seq = [[],[]]
+		#testing
+		test_x = []
+		test_y = []
+		test_l = []
+		seqCount = 0
 		for row in reader:
-		#read rows and create sequences for X and y
+#			if seqCount > 120:
+#				break
+		#read rows and create sequences for X and y and L
+			t = int(row[0])
+			l = int(row[1])
+			dl = int(row[2])
+			fg = float(row[3])
+			t_left = int(row[4])
+			e = [t,l,dl,fg]
+			seq[0].append(e)
+			seq[1].append(t_left)
+			if t < last:
+				x.append(seq[0])
+				y.append(seq[1])
+				seq = [[],[]]
+				seqCount += 1
+			last = t
+		if len(seq[0]) > 0:
+			x.append(seq[0])
+			y.append(seq[1])
+			seqCount += 1
+	#80:20 -- train:test
+	if seqCount != len(x):
+		print('not consistent', seqCount,len(x))
+		return
+	else:
+		print(seqCount)
+	#initializing
+	trainC = int(.5*seqCount)
+	trainX = []
+	trainL = []
+	trainY = []
+
+	testX = []
+	testL = []
+	testY = []
+	for i in range(0,seqCount):
+		for j in range(len(x[i])):
+			if i < trainC:
+				trainX.append(x[i][j])
+				trainY.append(y[i][j])
+			else:
+				testX.append(x[i][j])
+				testY.append(y[i][j])
+		if i < trainC:
+			trainL.append(len(x[i]))
+		else:
+			testL.append(len(x[i]))
+			
+	#check consistency
+	if sum(trainL) != len(trainX) or sum(testL) != len(testX):
+		print('Horror', sum(trainL),len(trainX), '.........', sum(testL), len(testX))
+		return
+	else:
+		print(len(trainX), len(trainX[0]))
+	X = np.array(trainX).reshape([len(trainX), 4])
+	Y = np.array(trainY).reshape((len(trainY),1))
+	#L = np.array(trainL).reshape((len(trainL),1))
+	model = GaussianHMM(n_components=50).fit(X,trainL)
+	tX = np.array(testX).reshape((len(testX),4))
+	tL = np.array(testL).reshape((len(testL),1))
+	pY = model.predict(tX[:testL[0]])
+	print(model.monitor_.converged,model.n_components)
+	print(model.transmat_)
+	for i in range(len(pY)):
+		print(tX[i], pY[i])
+	#print('transmat', model.transmat_)
+	#print('emission prob', model.emissionprob_)
+	#print('n_features', model.n_features)
 
 
 def debug1(dict_, sc_):
@@ -237,7 +316,7 @@ def debug1(dict_, sc_):
 	print('Total matches: ', c, 'error', err)
 
 if __name__ == "__main__":
-	path = '/home/anudipa/Documents/Jouler_Extra/scripts/data/shortlisted/f5df8ff55638f528e0151f217f5641264a1f27d9.p'
+	path = 'data/shortlisted/f5df8ff55638f528e0151f217f5641264a1f27d9.p'
 	dev = 'f5df8ff55638f528e0151f217f5641264a1f27d9'
 #	all_ = computeStates(path)
 #	if all_ is not None:
