@@ -23,6 +23,7 @@ class States(Base):
 	fg = Column(Float, nullable=False)
 
 	observed = relationship("ObservedData")
+	prob	 = relationship("TransitionMatrix") 
 
 	def __init__(self, time, level, drop, fg):
 		self.time = time
@@ -49,6 +50,20 @@ class ObservedData(Base):
 	def __repr__(self):
 		return "<ObservedData(state id="+self.state_id+", time left="+self.t_left+")>" 
 
+class TransitionMatrix(Base):
+	__tablename__ = 'transition'
+	id_ = Column(Integer, autoincrement=True, primary_key=True)
+	state_id_now = Column(Integer,ForeignKey('states.id_'))
+	state_id_next = Column(Integer,ForeignKey('states.id_'))
+	seen = Column(Integer, default=0, nullable=False)
+	total = Column(Integer, default,nullable=False)
+
+	def __init__(self,state_id_now, state_id_next):
+		self.state_id_now = state_id_now
+		self.state_id_next = state_id_next
+
+	def __repr__(self):
+		 return "<TransitionMatrix(current state id="+self.state_id_now+", next state id="+self.state_id_next+", # of occurences="+self.seen+", total # of occurrences=", self.total+")>"
 
 class MPPSystem:
 	Session = sessionmaker()
@@ -132,6 +147,13 @@ class MPPSystem:
 				con.close()
 			session.add_all(data_)
 			session.commit()
+
+#fill all possible state transitions in init, then fill in occurrences for each transition
+	def init_transition_matrix(self):
+		session = self.Session()
+		
+#select for each stateid<i>, get all stateid<j> where t<i> <= t<j> , l<i> >= l<j>
+		
 
 	def exit_session(self, session):
 		session.close()
