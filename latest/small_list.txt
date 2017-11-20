@@ -1,0 +1,45 @@
+**************************************************************
+**************************************************************
+                    10 routine users/ conservative users
+**************************************************************
+a328c84377a1c1030df478a64d6a99d880538ab6 is conservative user: #of sessions per day= 4.2573964497  avg start level= 20.8630993746  :::  [(0, 255), (1, 84), (4, 79)] 1439   #of days= 338
+
+7c907cde1fb2fa5efc42fb478e02b6dd84617de0 is conservative user: #of sessions per day= 2.42  avg start level= 63.7988980716  :::  [(97, 26), (94, 21), (62, 19)] 726   #of days= 300
+
+2e4ebd8019411bf18ebbee4532290d177dac6bc6 is conservative user: #of sessions per day= 1.6856187291  avg start level= 41.0853174603  :::  [(0, 37), (15, 17), (14, 16)] 504   #of days= 299
+
+0f73f649f1e0bb371f1fdcadf86f02567670315a is conservative user: #of sessions per day= 2.0503875969  avg start level= 38.1115311909  :::  [(0, 21), (15, 19), (12, 16)] 529   #of days= 258
+
+b1919a3bef353788c2318b64a43ea731a76759c2 is conservative user: #of sessions per day= 2.93968253968  avg start level= 44.7656587473  :::  [(0, 53), (15, 21), (41, 18)] 926   #of days= 315
+
+de656f74042e08b95989c95f09799678fa9c937a is conservative user: #of sessions per day= 4.44329896907  avg start level= 15.6658932715  :::  [(0, 202), (4, 66), (3, 50)] 862   #of days= 194
+
+1691ee6e8576a4015b86e27b3e608522c4e0d47d is conservative user: #of sessions per day= 1.65517241379  avg start level= 46.0364583333  :::  [(60, 13), (46, 12), (14, 12)] 384   #of days= 232
+
+abd5280bfc6fd637309b6ee3d5e34852b660fea3 is conservative user: #of sessions per day= 3.56544502618  avg start level= 21.4743024963  :::  [(0, 135), (4, 72), (3, 45)] 681   #of days= 191
+
+b24f338b4ededfa1e28a84832547f0dae45b0219 is conservative user: #of sessions per day= 2.23708206687  avg start level= 49.2173913043  :::  [(0, 17), (21, 15), (58, 14)] 736   #of days= 329
+
+a88e10aba01e79e03d454f5efa82c6def07388df is conservative user: #of sessions per day= 1.57042253521  avg start level= 37.4215246637  :::  [(0, 45), (15, 12), (14, 11)] 446   #of days= 284
+
+
+
+
+
+*****************************************************************
+*****************************************************************
+		10 not routine users/ not conservative
+*****************************************************************
+dcac21d5d407e60ee3fc3999982d30399bcd1f91 is not conservative user: #of sessions per day= 4.25225225225  avg start level= 38.4088983051  :::  [(38, 40), (0, 38), (39, 34)] 1416   #of days= 333
+
+29bc166a1caa51011d4a3d16e5a7ccbed645763a is not conservative user: #of sessions per day= 4.01320132013  avg start level= 37.9761513158  :::  [(0, 93), (4, 31), (14, 30)] 1216   #of days= 303
+
+0191c805a5f1ef0e10b046658fdbe026e33ca2b1 is not conservative user: #of sessions per day= 5.05571847507  avg start level= 51.2012761021  :::  [(38, 57), (48, 57), (51, 54)] 1724   #of days= 341
+
+474e3a6697d9c4cfeb4f1e3288fc430795df78bb is not conservative user: #of sessions per day= 4.63194444444  avg start level= 63.5014992504  :::  [(93, 34), (95, 33), (92, 31)] 1334   #of days= 288
+
+965e4a2138201a8be19f2febe2856a6eaeaead1f is not conservative user: #of sessions per day= 3.62314540059  avg start level= 80.9778869779  :::  [(97, 89), (94, 78), (95, 72)] 1221   #of days= 337
+
+8c033c6def7f93d5fd476a067f840002111f505e is not conservative user: #of sessions per day= 4.18390804598  avg start level= 36.3111263736  :::  [(14, 48), (15, 45), (12, 39)] 1456   #of days= 348
+
+

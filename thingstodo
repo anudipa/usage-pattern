@@ -9,4 +9,34 @@
 
 3. how long past history should to make accurate forecasts
 
+draft for paper:
 
+abstract
+
+introduction:
+	graph for showing variability of usage:
+		a. battery level with time across users (discharging)
+		b. charging sessions wrt to start level and time of day across all users
+		c. fraction of time foreground was active before charging points
+motivation
+	too much variability across users, need to be filtered or broadly categorised
+	routine/conservative users and opportunistic or chaotic users
+		a. graph to show difference in the usage patterns
+		b. table for users
+	we handle only freely available, non-private, non-sensitive data
+	constraints - we want to use less number of samples to train, the dataset is collected from the wild, we cannot make assumptions about what was happening in the environment at any given time
+	1a. graph to show discharging sessions are varried, there is no pattern to when drain rate is high in a session
+
+methods
+	the predictors are: time since start of discharge, current_level, total drop of level since start of discharge sessions, fraction of total time when foreground was active, time left to start of next charging session
+	reason for extrapolating to a common low level
+	the predictors cannot be reduced
+		a. graph showing correlation coefficient
+		b. regression graphs showing a fit is not possible
+		
+system
+	motivation for choosing neural networks
+	1.graph showing how accuracy defers with changing training set and parameters and algorithms
+	2. graph showing how accuracy changes based on time away from charging session
+	3. what is the behavior of the system when predictions are erroneous
+	4. graph showing how feedback can increase accuracy over time
